@@ -1,6 +1,5 @@
 #!/usr/bin/env node
 
-// @ts-check
 
 const arg = require('arg')
 const debug = require('debug')('cypress-testrail-simple')
@@ -34,7 +33,7 @@ if (args['--run']) {
 if (!runId) {
   console.error('Usage: testrail-close-run.js --run <number runId> [--force]')
   console.error('or pass it in the file runId.txt')
-  process.exit(1)
+  process.exit(0)
 }
 
 const force = process.argv[3] === '--force'

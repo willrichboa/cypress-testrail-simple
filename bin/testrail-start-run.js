@@ -1,14 +1,11 @@
 #!/usr/bin/env node
 
-// @ts-check
-
 const fs = require('fs')
 const arg = require('arg')
 const debug = require('debug')('cypress-testrail-simple')
 const got = require('got')
 const globby = require('globby')
 const findCypressSpecs = require('find-cypress-specs')
-const ghCore = require('@actions/core')
 const { getTestRailConfig, getAuthorization } = require('../src/get-config')
 const { findCases } = require('../src/find-cases')
 const { getTestSuite } = require('../src/testrail-api')
@@ -26,38 +23,35 @@ const args = arg(
     '--tagged': String,
     // do not open the test run, just find everything
     '--dry': Boolean,
-    // set run id as GitHub Actions output
-    '--set-gha-output': Boolean,
     // aliases
     '-s': '--spec',
     '-n': '--name',
     '-d': '--description',
     '-st': '--suite',
-    '-gha': '--set-gha-output',
   },
   { permissive: true },
 )
-// optional arguments
-const name = args['--name'] || args._[0]
-const description = args['--description'] || args._[1]
-debug('args: %o', args)
-debug('run name: %s', name)
-debug('run description: %s', description)
 
 function findSpecs(pattern) {
-  // @ts-ignore
   return globby(pattern, {
     absolute: true,
   })
 }
 
-async function startRun({
-  testRailInfo,
-  name,
-  description,
-  caseIds,
-  setGitHubActionsOutput,
-}) {
+async function startRun(caseIds) {
+  if (caseIds && caseIds.length < 1) {
+    console.error('no case ids found aborting test run creation to avoid making a test run with all test cases in project')
+    // don't fail the run just exit
+    process.exit(0)
+  }
+
+  const testRailInfo = getTestRailConfig()
+  // optional arguments
+  const name = args['--name'] || args._[0]
+  const description = args['--description'] || args._[1]
+  debug('args: %o', args)
+  debug('run name: %s', name)
+  debug('run description: %s', description)
   // only output the run ID to the STDOUT, everything else is logged to the STDERR
   console.error(
     'creating new TestRail run for project %s',
@@ -78,8 +72,8 @@ async function startRun({
   if (caseIds && caseIds.length > 0) {
     const uniqueCaseIds = [...new Set(caseIds)]
     if (uniqueCaseIds.length !== caseIds.length) {
-      debug('Removed duplicate case IDs')
-      debug('have %d case IDs', uniqueCaseIds.length)
+      console.error('Removed duplicate case IDs')
+      console.error('have %d case IDs', uniqueCaseIds.length)
     }
     json.include_all = false
     json.case_ids = uniqueCaseIds
@@ -99,7 +93,46 @@ async function startRun({
     await getTestSuite(suiteId, testRailInfo)
   }
 
-  // @ts-ignore
+  if (args['--dry']) {
+    console.log('Dry run, not starting a new run')
+    console.log(addRunUrl)
+    console.info(json.case_ids)
+    return
+  }
+
+  // get all the case ids and remove any that dont exist in the defined project and suite
+  let done = false
+  const foundIds = []
+  const baseURL = `${testRailInfo.host}/index.php?`
+  let getCasesURL = `${baseURL}/api/v2/get_cases/${testRailInfo.projectId}&suite_id=${json.suite_id || process.env.TESTRAIL_SUITEID}`
+  while (done === false) {
+    await got(getCasesURL, { method: 'GET', headers: { authorization } })
+      .json()
+      .then(
+        (json) => {
+          json.cases?.forEach(element => {
+            if (element.is_deleted === 0) {
+              foundIds.push(element.id)
+            }
+          });
+          if (!json._links || !json._links?.next || json._links?.next === '') {
+            done = true
+            return
+          }
+          getCasesURL = `${baseURL}${json._links.next}`
+        }
+      )
+  }
+  const temp = []
+  json.case_ids.forEach((cid) => {
+    if (foundIds.includes(cid)) {
+      temp.push(cid)
+      return
+    }
+  })
+  json.case_ids = temp
+
+  // now create the run
   return got(addRunUrl, {
     method: 'POST',
     headers: {
@@ -114,18 +147,14 @@ async function startRun({
         debug('response from the add_run')
         debug('%o', json)
         console.log(json.id)
-
-        if (setGitHubActionsOutput) {
-          ghCore.setOutput('testRailRunId', json.id)
-          debug('set GHA output %s %s', 'testRailRunId', json.id)
-        }
       },
       (error) => {
         console.error('Could not create a new TestRail run')
-        console.error('Response: %s', error.name)
+        console.error('Response error name: %s', error.name)
+        console.error('%o', error.response.body)
         console.error('Please check your TestRail configuration')
         if (json.case_ids) {
-          console.error('and the case IDs: %s', json.case_ids)
+          console.error('and the case IDs: %s', JSON.stringify(json.case_ids))
         }
         process.exit(1)
       },
@@ -147,43 +176,20 @@ if (args['--find-specs']) {
   }
   const caseIds = findCases(specs, fs.readFileSync, tagged)
   debug('found %d TestRail case ids: %o', caseIds.length, caseIds)
+  runConfig
+  return startRun(caseIds)
 
-  if (args['--dry']) {
-    console.log('Dry run, not starting a new run')
-  } else {
-    const testRailInfo = getTestRailConfig()
-    startRun({
-      testRailInfo,
-      name,
-      description,
-      caseIds,
-      setGitHubActionsOutput: args['--set-gha-output'],
-    })
-  }
-} else if (args['--spec']) {
-  findSpecs(args['--spec']).then((specs) => {
-    debug('using pattern "%s" found specs', args['--spec'])
-    debug(specs)
-    const caseIds = findCases(specs)
-    debug('found %d TestRail case ids: %o', caseIds.length, caseIds)
-
-    const testRailInfo = getTestRailConfig()
-    startRun({
-      testRailInfo,
-      name,
-      description,
-      caseIds,
-      setGitHubActionsOutput: args['--set-gha-output'],
-    })
-  })
-} else {
-  const testRailInfo = getTestRailConfig()
-  // start a new test run for all test cases
-  // @ts-ignore
-  startRun({
-    testRailInfo,
-    name,
-    description,
-    setGitHubActionsOutput: args['--set-gha-output'],
-  })
 }
+if (args['--spec']) {
+  return findSpecs(args['--spec'])
+    .then((specs) => {
+      debug('using pattern "%s" found specs', args['--spec'])
+      debug(specs)
+      const caseIds = findCases(specs)
+      debug('found %d TestRail case ids: %o', caseIds.length, caseIds)
+
+      return startRun(caseIds)
+    })
+}
+// start a new test run for all test cases
+return startRun()
