@@ -1,6 +1,5 @@
 /// <reference types="cypress" />
 
-// @ts-check
 const debug = require('debug')('cypress-testrail-simple')
 const got = require('got')
 const {
@@ -56,17 +55,13 @@ async function registerPlugin(on, config, skipPlugin = false) {
     debug('the user explicitly disabled the plugin')
     return
   }
-
-  if (!hasConfig(process.env)) {
-    debug('cypress-testrail-simple env variables are not set')
+  const runId = getTestRunId(config)
+  if (!runId) {
+    console.log('cypress-testrail-simple no testrail run id found. reporter plugin will not be used')
     return
   }
 
   const testRailInfo = getTestRailConfig()
-  const runId = getTestRunId(config)
-  if (!runId) {
-    throw new Error('Missing test rail run ID')
-  }
 
   const caseIds = await getCasesInTestRun(runId, testRailInfo)
   debug('test run %d has %d cases', runId, caseIds.length)
@@ -116,9 +111,12 @@ async function registerPlugin(on, config, skipPlugin = false) {
       const testCaseIds = getTestCases(testName)
       testCaseIds.forEach((case_id) => {
         const status_id = status[result.state] || defaultStatus.failed
+        const errorVal = result.displayError ? ` \n\n**Error**: \n> ${result.displayError.substring(0, result.displayError.indexOf('at Context.eval'))}` : ''
         const testRailResult = {
-          case_id,
-          status_id,
+          case_id: case_id,
+          status_id: status_id,
+
+          comment: `**Automated Test Title**: ${result.title.join('>')}${errorVal}`
         }
 
         if (caseIds.length && !caseIds.includes(case_id)) {
@@ -135,6 +133,8 @@ async function registerPlugin(on, config, skipPlugin = false) {
         (err) => {
           console.error('Error sending TestRail results')
           console.error(err)
+          console.error(err.response.body)
+          console.error(JSON.stringify(testRailResults))
         },
       )
     }
