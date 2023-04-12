@@ -146,6 +146,7 @@ async function startRun(caseIds) {
       (json) => {
         debug('response from the add_run')
         debug('%o', json)
+        process.env.TESTRAIL_RUN_ID = json.id
         console.log(json.id)
       },
       (error) => {

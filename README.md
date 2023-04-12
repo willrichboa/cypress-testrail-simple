@@ -1,20 +1,16 @@
 # cypress-testrail-simple
 
-[![cypress-testrail-simple](https://img.shields.io/endpoint?url=https://dashboard.cypress.io/badge/simple/41cgid/main&style=flat&logo=cypress)](https://dashboard.cypress.io/projects/41cgid/runs) [![ci](https://github.com/bahmutov/cypress-testrail-simple/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/bahmutov/cypress-testrail-simple/actions/workflows/ci.yml) [![CircleCI](https://circleci.com/gh/bahmutov/cypress-testrail-simple/tree/main.svg?style=svg)](https://circleci.com/gh/bahmutov/cypress-testrail-simple/tree/main) ![cypress version](https://img.shields.io/badge/cypress-12.9.0-brightgreen) [![renovate-app badge][renovate-badge]][renovate-app]
-
 > Simple upload of Cypress test results to TestRail
 
-Read the blog post [Cypress And TestRail](https://glebbahmutov.com/blog/cypress-and-testrail/). For testing, [this is a private TestRail project](https://bahmutov.testrail.io/index.php?/suites/view/1).
+forked from [cypress-testrail-simple](https://github.com/bahmutov/cypress-testrail-simple)
 
 ## Install
 
-Add this plugin as a dev dependency
+Add this plugin as a dependency
 
 ```
 # If using NPM
-$ npm i -D cypress-testrail-simple
-# If using Yarn
-$ yarn add -D cypress-testrail-simple
+$ npm i -D git+ssh://git@github.com/willrichboa/cypress-testrail-simple.git
 ```
 
 ### Cypress v10+
@@ -61,14 +57,19 @@ TESTRAIL_PASSWORD=
 TESTRAIL_PROJECTID=
 ; if you use suites, add a suite ID (with S or without)
 TESTRAIL_SUITEID=...
+; if you have a run id already
+TESTRAIL_RUN_ID=...
 ```
 
 If these variables are present, we assume the user wants to use the plugin. You can disable the plugin by passing an argument
 
 ```js
 module.exports = async (on, config) => {
-  // skip loading the plugin
-  await require('cypress-testrail-simple/src/plugin')(on, config, true)
+  // cypress/plugins/index.js
+const cypressTestrailSimple = require('cypress-testrail-simple/src/plugin')
+// skip using the plugin if the testrail run id is not defined.
+// allows you to easily run locally without a run id
+  await cypressTestrailSimple(on, config, (process.env.TESTRAIL_RUN_ID === ""))
 }
 ```
 
@@ -76,16 +77,16 @@ module.exports = async (on, config) => {
 
 ### testrail-start-run
 
-To start a new TestRail run
+Used to start a new TestRail run.  output is the run id.
 
 ```
-runId=$(npx testrail-start-run)
+export TESTRAIL_RUN_ID=$(npx testrail-start-run)
 ```
 
 You can pass an optional test run name and description
 
 ```
-runId=$(npx testrail-start-run "test run" "test run description")
+export TESTRAIL_RUN_ID=$(npx testrail-start-run "test run" "test run description")
 ```
 
 You can redirect the run ID into a file
@@ -101,7 +102,6 @@ npx testrail-start-run > runId.txt
 - `--suite` optional suite ID, alias `-s`
 - `--spec` optional [globby](https://github.com/sindresorhus/globby#readme) pattern for finding specs, extracting case IDs (using the `C\d+` regular expression), and starting a new TestRail run with those case IDs only. Alias `-s`. This option is very useful if only some test cases are automated using Cypress. See the workflow examples in [.github/workflows/cases.yml](./.github/workflows/cases.yml) and [.circleci/config.yml](./.circleci/config.yml).
 - `--dry` only parses the arguments and finds the test case IDs, but does not trigger the run
-- `--set-gha-output` sets the created TestRail run id as GitHub Actions output `testRailRunId`
 
 ```
 npx testrail-start-run --name "test run" --description "test run description"
@@ -262,116 +262,10 @@ $ TESTRAIL_RUN_ID=635 npx cypress run
 $ npx cypress run --env testRailRunId=635
 ```
 
-- read it from the text file `runId.txt` (written there by the `testrail-start-run` script)
-
-## Examples
-
-- [bahmutov/test-rail-example](https://github.com/bahmutov/test-rail-example)
-- [bahmutov/test-rail-suite-example](https://github.com/bahmutov/test-rail-suite-example)
-
-## Debugging
-
-This tool uses [debug](https://github.com/visionmedia/debug#readme) to output verbose logs. To see the logs, run it with environment variable `DEBUG=cypress-testrail-simple`.
-
-To start a new test rail run locally and see how the new run is created
-
-```
-$ as-a . node ./bin/testrail-start-run.js --spec 'cypress/e2e/\*.js'
-```
-
-Make sure this plugin is registered correctly in your `cypress/plugins/index.js` file and the plugin function is declared with the `async` keyword in v3. During the test run, you should see messages like this after each spec
-
-![Sending test results to TestRail](./images/logs.png)
-
-## Why?
-
-Because [cypress-testrail-reporter](https://github.com/Vivify-Ideas/cypress-testrail-reporter) is broken in a variety of ways and does not let me open issues to report the problems.
-
-## Migration
-
-### v1 to v2
-
-The config plugin registration function used to take 2 parameters (it is unclear from the tests)
-
-```js
-// v1
-// cypress/plugins/index.js
-module.exports = (on, config) => {
-  // https://github.com/bahmutov/cypress-testrail-simple
-  require('cypress-testrail-simple/src/plugin')(on)
-}
-```
-
-In the second version, we need to pass both the `on` and the `config` parameters
-
-```js
-// v2
-// cypress/plugins/index.js
-module.exports = (on, config) => {
-  // https://github.com/bahmutov/cypress-testrail-simple
-  require('cypress-testrail-simple/src/plugin')(on, config)
-}
-```
-
-If you want to skip the plugin's registration step, pass the 3rd argument
-
-```js
-// v2
-// cypress/plugins/index.js
-module.exports = (on, config) => {
-  const skipPluginRegistration = true
-  // https://github.com/bahmutov/cypress-testrail-simple
-  require('cypress-testrail-simple/src/plugin')(
-    on,
-    config,
-    skipPluginRegistration,
-  )
-}
-```
-
-### v2 to v3
-
-The plugin registration function has changed from synchronous to `async`. This means _your Cypress plugin file_ also needs to be marked `async` and await the registration.
-
-```js
-// v2
-// cypress/plugins/index.js
-module.exports = (on, config) => {
-  // https://github.com/bahmutov/cypress-testrail-simple
-  require('cypress-testrail-simple/src/plugin')(on, config)
-}
-```
-
-Now
-
-```js
-// v3
-// cypress/plugins/index.js
-module.exports = async (on, config) => {
-  // https://github.com/bahmutov/cypress-testrail-simple
-  await require('cypress-testrail-simple/src/plugin')(on, config)
-}
-```
-
-## Small print
-
-Author: Gleb Bahmutov &lt;gleb.bahmutov@gmail.com&gt; &copy; 2021
-
-- [@bahmutov](https://twitter.com/bahmutov)
-- [glebbahmutov.com](https://glebbahmutov.com)
-- [blog](https://glebbahmutov.com/blog)
-- [videos](https://www.youtube.com/glebbahmutov)
-- [presentations](https://slides.com/bahmutov)
-- [cypress.tips](https://cypress.tips)
-
-License: MIT - do anything with the code, but don't blame me if it does not work.
-
-Support: if you find any problems with this module, email / tweet /
-[open issue](https://github.com/bahmutov/cypress-testrail-simple/issues) on Github
 
 ## MIT License
 
-Copyright (c) 2021 Gleb Bahmutov &lt;gleb.bahmutov@gmail.com&gt;
+Copyright (c) 2023 Will Rich
 
 Permission is hereby granted, free of charge, to any person
 obtaining a copy of this software and associated documentation
@@ -394,8 +288,6 @@ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 
-[renovate-badge]: https://img.shields.io/badge/renovate-app-blue.svg
-[renovate-app]: https://renovateapp.com/
 
 ```
 
