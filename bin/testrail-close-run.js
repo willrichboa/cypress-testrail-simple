@@ -2,8 +2,7 @@
 
 
 const arg = require('arg')
-const debug = require('debug')('cypress-testrail-simple')
-const { getTestRunId, getTestRailConfig } = require('../src/get-config')
+const { getTestRailConfig } = require('../src/get-config')
 const { getTestRun, closeTestRun } = require('../src/testrail-api')
 
 const args = arg(
@@ -14,37 +13,22 @@ const args = arg(
   { permissive: true },
 )
 
-debug('arguments %o', args)
 
-let runId
+const runId = args['--run']
 
-if (args['--run']) {
-  runId = args['--run']
-} else {
-  const runIdStr = args._[0]
-  if (!runIdStr) {
-    debug('TestRail run id not passed via CLI, trying the file')
-    runId = getTestRunId(null)
-  } else {
-    runId = parseInt(runIdStr, 10)
-  }
-}
+const force = args['--force']
 
 if (!runId) {
   console.error('Usage: testrail-close-run.js --run <number runId> [--force]')
-  console.error('or pass it in the file runId.txt')
   process.exit(0)
 }
 
-const force = process.argv[3] === '--force'
 
 const testRailInfo = getTestRailConfig()
-debug('test rail info with the password masked')
-debug('%o', { ...testRailInfo, password: '<masked>' })
 
 getTestRun(runId, testRailInfo).then((runInfo) => {
   if (runInfo.is_completed) {
-    console.log('Run %d is already completed', runId)
+    console.log('Run %d was already completed', runId)
     return
   }
 
