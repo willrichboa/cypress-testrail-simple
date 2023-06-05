@@ -111,7 +111,11 @@ async function registerPlugin(on, config, skipPlugin = false) {
       const testCaseIds = getTestCases(testName)
       testCaseIds.forEach((case_id) => {
         const status_id = status[result.state] || defaultStatus.failed
-        const errorVal = result.displayError ? ` \n\n**Error**: \n> ${result.displayError.substring(0, result.displayError.indexOf('at Context.eval'))}` : ''
+        const errorVal = result.displayError ?
+          `\n\n**Error**: \n> ${result.displayError
+            .substring(0, result.displayError.indexOf('at Context.eval'))
+            .substring(0, result.displayError.indexOf('The previous command that ran was'))}` :
+          ''
         const testRailResult = {
           case_id: case_id,
           status_id: status_id,
