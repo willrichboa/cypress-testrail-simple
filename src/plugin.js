@@ -113,8 +113,9 @@ async function registerPlugin(on, config, skipPlugin = false) {
         const status_id = status[result.state] || defaultStatus.failed
         const errorVal = result.displayError ?
           `\n\n**Error**: \n> ${result.displayError
-            .substring(0, result.displayError.indexOf('at Context.eval'))
-            .substring(0, result.displayError.indexOf('The previous command that ran was'))}` :
+            .substring(0, result.displayError.indexOf('https://on.cypress.io'))
+            .substring(0, result.displayError.indexOf('The previous command that ran was'))
+            .substring(0, result.displayError.indexOf('at Context.eval'))}` :
           ''
         const testRailResult = {
           case_id: case_id,
