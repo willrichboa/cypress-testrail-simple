@@ -24,9 +24,6 @@ function getTestRailConfig(env = process.env) {
   if (!env.TESTRAIL_PROJECTID) {
     throw new Error('TESTRAIL_PROJECTID is required.')
   }
-  if (!env.TESTRAIL_RUN_ID) {
-    throw new Error('TESTRAIL_RUN_ID is required.')
-  }
 
   if (!env.TESTRAIL_HOST.startsWith('https://')) {
     throw new Error(`TESTRAIL_HOST should start with "https://`)
