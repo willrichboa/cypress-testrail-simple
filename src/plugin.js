@@ -3,7 +3,6 @@
 const debug = require('debug')('cypress-testrail-simple')
 const got = require('got')
 const {
-  hasConfig,
   getTestRailConfig,
   getAuthorization,
   getTestRunId,
@@ -55,7 +54,7 @@ async function registerPlugin(on, config, skipPlugin = false) {
     debug('the user explicitly disabled the plugin')
     return
   }
-  const runId = getTestRunId(config)
+  const runId = getTestRunId()
   if (!runId) {
     console.log('cypress-testrail-simple no testrail run id found. reporter plugin will not be used')
     return

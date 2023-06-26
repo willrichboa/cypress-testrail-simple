@@ -9,8 +9,7 @@ const got = require('got')
  * a combined list, sorted by ID.
  */
 async function getProjectCases({ testRailInfo }) {
-  // only output the run ID to the STDOUT, everything else is logged to the STDERR
-  console.error(
+  debug(
     'fetching cases for TestRail project %s',
     testRailInfo.projectId,
   )
