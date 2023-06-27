@@ -17,16 +17,27 @@ $ npm i -D git+ssh://git@github.com/willrichboa/cypress-testrail-simple.git
 
 Include this plugin from your `cypress.config.js` file E2E (or component tests) Node callback
 
+Note that you can only have one instance of on('after:spec'=> {}) or on('before:run'=> {}), so you need to combine them if you have more.
+
 ```js
 // cypress.config.js
 const { defineConfig } = require('cypress')
-const cypressTestrailSimple = require('cypress-testrail-simple/src/plugin')
+const { parseResults, registerPlugin, sendTestResults } = require('cypress-testrail-simple/src/plugin')
 
 module.exports = defineConfig({
   e2e: {
     // other settings, like baseUrl
-    async setupNodeEvents(on, config) {
-      await cypressTestrailSimple(on, config, (process.env.TESTRAIL_RUN_ID === ''))
+    setupNodeEvents: async (on, config) => {
+      on('before:run', async () => {
+        // https://github.com/willrichboa/cypress-testrail-simple
+        await registerPlugin()
+      })
+      on('after:spec', async (test, runnable) => {
+        // https://github.com/willrichboa/cypress-testrail-simple
+        const testRailResults = parseResults(test, runnable)
+        if (testRailResults.length) {
+          await sendTestResults(testRailResults)
+        }
     },
   },
 })
@@ -40,14 +51,24 @@ Add the plugin to your Cypress plugin file
 const cypressTestrailSimple = require('cypress-testrail-simple/src/plugin')
 // cypress/plugins/index.js
 module.exports = async (on, config) => {
-  await cypressTestrailSimple(on, config, (process.env.TESTRAIL_RUN_ID === ''))
+    on('before:run', async () => {
+      // https://github.com/willrichboa/cypress-testrail-simple
+      await registerPlugin()
+    })
+    on('after:spec', async (test, runnable) => {
+      // https://github.com/willrichboa/cypress-testrail-simple
+      const testRailResults = parseResults(test, runnable)
+      if (testRailResults.length) {
+        await sendTestResults(testRailResults)
+      }
+    })
 }
 ```
 
 ## Example script to run the tests in CI
 
 execute_tests_with_testrail_reporting.sh
-```
+```sh
 #!/bin/sh
 
 SPECS=$1
