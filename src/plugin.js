@@ -75,10 +75,16 @@ function parseResults(spec, results) {
   }
   return testRailResults
 }
-async function sendTestResults(testResults) {
+async function sendTestResults(spec, results, skipPlugin = false) {
+  if (skipPlugin) { return }
+  const testRailResults = parseResults(spec, results)
+
+  if (testRailResults.length) {
+    return
+  }
   console.log(
     'sending %d test results to TestRail for run %d',
-    testResults.length,
+    testRailResults.length,
     _runId,
   )
   const addResultsUrl = `${_testRailInfo.host}/index.php?/api/v2/add_results_for_cases/${_runId}`
@@ -92,7 +98,7 @@ async function sendTestResults(testResults) {
       authorization,
     },
     json: {
-      results: testResults,
+      results: testRailResults,
     },
   }).json().catch(
     (err) => {
@@ -105,7 +111,8 @@ async function sendTestResults(testResults) {
 
   debug('TestRail response: %o', json)
 }
-async function registerPlugin() {
+async function registerPlugin(skipPlugin = false) {
+  if (skipPlugin) { return }
   if (!process.env.TESTRAIL_RUN_ID) {
     debug('test run id did not exist')
     return

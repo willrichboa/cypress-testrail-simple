@@ -30,14 +30,11 @@ module.exports = defineConfig({
     setupNodeEvents: async (on, config) => {
       on('before:run', async () => {
         // https://github.com/willrichboa/cypress-testrail-simple
-        await registerPlugin()
+        await registerPlugin(process.env.TESTRAIL_RUN_ID==='')
       })
       on('after:spec', async (test, runnable) => {
         // https://github.com/willrichboa/cypress-testrail-simple
-        const testRailResults = parseResults(test, runnable)
-        if (testRailResults.length) {
-          await sendTestResults(testRailResults)
-        }
+        await sendTestResults(test, runnable, process.env.TESTRAIL_RUN_ID==='')
     },
   },
 })
