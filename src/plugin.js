@@ -4,10 +4,9 @@ const debug = require('debug')('cypress-testrail-simple/plugin')
 const got = require('got')
 const {
   getTestRailConfig,
-  getAuthorization,
   getTestRunId,
 } = require('./get-config')
-const { getCasesInTestRun } = require('./testrail-api')
+const { getCasesInTestRun, postTestResults } = require('./testrail-api')
 const { getTestCases } = require('./find-cases')
 
 let _testRailInfo
@@ -79,7 +78,7 @@ async function sendTestResults(spec, results, skipPlugin = false) {
   if (skipPlugin) { return }
   const testRailResults = parseResults(spec, results)
 
-  if (testRailResults.length) {
+  if (!testRailResults.length) {
     return
   }
   console.log(
@@ -87,20 +86,8 @@ async function sendTestResults(spec, results, skipPlugin = false) {
     testRailResults.length,
     _runId,
   )
-  const addResultsUrl = `${_testRailInfo.host}/index.php?/api/v2/add_results_for_cases/${_runId}`
-  const authorization = getAuthorization(_testRailInfo)
 
-  // @ts-ignore
-  const json = await got(addResultsUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      authorization,
-    },
-    json: {
-      results: testRailResults,
-    },
-  }).json().catch(
+  return postTestResults(testRailResults, _runId, _testRailInfo).catch(
     (err) => {
       console.error('Error sending TestRail results')
       console.error(err)
@@ -108,8 +95,6 @@ async function sendTestResults(spec, results, skipPlugin = false) {
       console.error(JSON.stringify(testRailResults))
     },
   )
-
-  debug('TestRail response: %o', json)
 }
 async function registerPlugin(skipPlugin = false) {
   if (skipPlugin) { return }
@@ -122,6 +107,7 @@ async function registerPlugin(skipPlugin = false) {
   _testRailInfo = getTestRailConfig()
 
   _caseIds = await getCasesInTestRun(_runId, _testRailInfo)
+
   if (_caseIds.length < 1) { throw new Error('expected run to have at least one case id') }
   debug('test run %d has %d cases', _runId, _caseIds.length)
   debug(_caseIds)

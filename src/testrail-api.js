@@ -147,6 +147,26 @@ async function getTestSuite(suiteId, testRailInfo) {
   debug(json)
   return json
 }
+async function postTestResults(resultsToSend, runID, testRailInfo) {
+  const addResultsUrl = `${testRailInfo.host}/index.php?/api/v2/add_results_for_cases/${runID}`
+  const authorization = getAuthorization(testRailInfo)
+
+  // @ts-ignore
+  const json = await got(addResultsUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      authorization,
+    },
+    json: {
+      results: resultsToSend,
+    },
+  }).json()
+
+  debug('get test results %d response', json)
+  debug(json)
+  return json
+}
 
 module.exports = {
   TestRailStatus,
@@ -156,4 +176,5 @@ module.exports = {
   getTestSuite,
   getTestRunResults,
   getCasesInTestRun,
+  postTestResults,
 }
