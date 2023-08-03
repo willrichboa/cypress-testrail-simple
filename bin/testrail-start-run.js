@@ -38,12 +38,7 @@ function findSpecs(pattern) {
   })
 }
 
-async function startRun(caseIds) {
-  if (caseIds && caseIds.length < 1) {
-    console.error('no case ids found aborting test run creation to avoid making a test run with all test cases in project')
-    // don't fail the run just exit
-    process.exit(0)
-  }
+export async function startRun(caseIds, customAutomationType = 1) {
 
   const testRailInfo = getTestRailConfig()
   // optional arguments
@@ -69,6 +64,7 @@ async function startRun(caseIds) {
     name,
     description,
   }
+  // dedupe the user provided case id list
   if (caseIds && caseIds.length > 0) {
     const uniqueCaseIds = [...new Set(caseIds)]
     if (uniqueCaseIds.length !== caseIds.length) {
@@ -111,7 +107,9 @@ async function startRun(caseIds) {
       .then(
         (json) => {
           json.cases?.forEach(element => {
-            if (element.is_deleted === 0) {
+            if (element.is_deleted === 0 &&
+              element.custom_automation_type === customAutomationType &&
+              !element.custom_inactive_test_case) {
               foundIds.push(element.id)
             }
           });
@@ -124,13 +122,19 @@ async function startRun(caseIds) {
       )
   }
   const temp = []
-  json.case_ids.forEach((cid) => {
-    if (foundIds.includes(cid)) {
-      temp.push(cid)
-      return
-    }
-  })
-  json.case_ids = temp
+  // compare ids from testrail with user list
+  if (caseIds && caseIds > 0) {
+    json.case_ids.forEach((cid) => {
+      if (foundIds.includes(cid)) {
+        temp.push(cid)
+        return
+      }
+    })
+    json.case_ids = temp
+  } else {
+    // if no user provided list then use all found
+    json.case_ids = foundIds
+  }
 
   // now create the run
   return got(addRunUrl, {
