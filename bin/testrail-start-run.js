@@ -47,7 +47,7 @@ async function startRun(caseIds = []) {
 
   let auto = args['--auto']
   if (auto) {
-    json.automation_code = auto
+    json.automation_code = Number(auto)
     json.include_all = false
   }
   if (args['--dry']) {
@@ -88,7 +88,8 @@ async function startRun(caseIds = []) {
       )
   }
   const temp = []
-  // compare ids from testrail with user list
+  // compare ids from testrail with user provided list
+  // add any that match
   if (caseIds && caseIds > 0) {
     json.case_ids.forEach((cid) => {
       if (foundIds.includes(cid)) {
