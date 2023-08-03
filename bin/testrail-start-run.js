@@ -4,7 +4,6 @@ const fs = require('fs')
 const arg = require('arg')
 const debug = require('debug')('cypress-testrail-simple')
 const got = require('got')
-const globby = require('globby')
 const findCypressSpecs = require('find-cypress-specs')
 const { getTestRailConfig, getAuthorization } = require('../src/get-config')
 const { findCases } = require('../src/find-cases')
@@ -31,14 +30,7 @@ const args = arg(
   },
   { permissive: true },
 )
-
-function findSpecs(pattern) {
-  return globby(pattern, {
-    absolute: true,
-  })
-}
-
-export async function startRun(caseIds, customAutomationType = 1) {
+async function startRun(caseIds, customAutomationType = 1) {
 
   const testRailInfo = getTestRailConfig()
   // optional arguments
