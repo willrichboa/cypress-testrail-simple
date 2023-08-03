@@ -33,7 +33,7 @@ const args = arg(
   { permissive: true },
 )
 async function startRun(caseIds = []) {
-  const json = { name: '', description: '', include_all: true, case_ids: [], suite_id: undefined, automation_code: undefined }
+  const postBodyJSON = { name: '', description: '', include_all: true, case_ids: [], suite_id: undefined, automation_code: undefined }
   // dedupe the user provided case id list
   if (caseIds && caseIds.length > 0) {
     const uniqueCaseIds = [...new Set(caseIds)]
@@ -41,19 +41,19 @@ async function startRun(caseIds = []) {
       console.error('Removed duplicate case IDs')
       console.error('have %d case IDs', uniqueCaseIds.length)
     }
-    json.include_all = false
-    json.case_ids = uniqueCaseIds
+    postBodyJSON.include_all = false
+    postBodyJSON.case_ids = uniqueCaseIds
   }
 
   let auto = args['--auto']
   if (auto) {
-    json.automation_code = Number(auto)
-    json.include_all = false
+    postBodyJSON.automation_code = Number(auto)
+    postBodyJSON.include_all = false
   }
   if (args['--dry']) {
     console.log('Dry run, not starting a new run')
     console.log('POST body so far')
-    console.info(json)
+    console.info(postBodyJSON)
     return
   }
 
@@ -64,48 +64,51 @@ async function startRun(caseIds = []) {
   let done = false
   const foundIds = []
   const baseURL = `${testRailInfo.host}/index.php?`
-  let getCasesURL = `${baseURL}/api/v2/get_cases/${testRailInfo.projectId}&suite_id=${json.suite_id || process.env.TESTRAIL_SUITEID}`
+  let getCasesURL = `${baseURL}/api/v2/get_cases/${testRailInfo.projectId}&suite_id=${postBodyJSON.suite_id || process.env.TESTRAIL_SUITEID}`
   while (done === false) {
     await got(getCasesURL, { method: 'GET', headers: { authorization } })
       .json()
       .then(
-        (json) => {
-          json.cases?.forEach(element => {
-            if (
-              element.is_deleted === 0 &&
-              !element.custom_inactive_test_case &&
-              (json.automation_code && element.custom_automation_type === json.automation_code)
-            ) {
-              foundIds.push(element.id)
+        (resp) => {
+          resp.cases?.forEach(element => {
+            if (postBodyJSON.automation_code) {
+              if (element.is_deleted === 0 && element.custom_automation_type === postBodyJSON.automation_code) {
+                foundIds.push(element.id)
+              }
+            } else {
+              if (element.is_deleted === 0) {
+                foundIds.push(element.id)
+              }
             }
           });
-          if (!json._links || !json._links?.next || json._links?.next === '') {
+          if (!resp._links || !resp._links?.next || resp._links?.next === '') {
             done = true
             return
           }
-          getCasesURL = `${baseURL}${json._links.next}`
+          getCasesURL = `${baseURL}${resp._links.next}`
         }
       )
   }
+  console.log(foundIds)
   const temp = []
   // compare ids from testrail with user provided list
   // add any that match
   if (caseIds && caseIds > 0) {
-    json.case_ids.forEach((cid) => {
+    postBodyJSON.case_ids.forEach((cid) => {
       if (foundIds.includes(cid)) {
         temp.push(cid)
         return
       }
     })
-    json.case_ids = temp
+    postBodyJSON.case_ids = temp
   } else {
     // if no user provided list then use all found
-    json.case_ids = foundIds
+    postBodyJSON.case_ids = foundIds
   }
 
   // optional arguments
-  json.name = args['--name'] || args._[0]
-  json.description = args['--description'] || args._[1]
+  postBodyJSON.name = args['--name'] || args._[0]
+  postBodyJSON.description = args['--description'] || args._[1]
   // only output the run ID to the STDOUT, everything else is logged to the STDERR
   console.error(
     'creating new TestRail run for project %s',
@@ -124,7 +127,7 @@ async function startRun(caseIds = []) {
     if (suiteId.startsWith('S')) {
       suiteId = suiteId.substring(1)
     }
-    json.suite_id = Number(suiteId)
+    postBodyJSON.suite_id = Number(suiteId)
     // await getTestSuite(suiteId, testRailInfo)
   }
 
@@ -132,7 +135,7 @@ async function startRun(caseIds = []) {
     console.log('Dry run, not starting a new run')
     console.log(addRunUrl)
     console.log('POST body')
-    console.info(json)
+    console.info(postBodyJSON)
     return
   }
 
@@ -143,21 +146,21 @@ async function startRun(caseIds = []) {
       'Content-Type': 'application/json',
       authorization,
     },
-    json,
+    postBodyJSON,
   })
     .json()
     .then(
-      (json) => {
-        process.env.TESTRAIL_RUN_ID = json.id
-        console.log(json.id)
+      (resp) => {
+        process.env.TESTRAIL_RUN_ID = resp.id
+        console.log(resp.id)
       },
       (error) => {
         console.error('Could not create a new TestRail run')
         console.error('Response error name: %s', error.name)
         console.error('%o', error.response.body)
         console.error('Please check your TestRail configuration')
-        if (json.case_ids) {
-          console.error('and the case IDs: %s', JSON.stringify(json.case_ids))
+        if (postBodyJSON.case_ids) {
+          console.error('and the case IDs: %s', JSON.stringify(postBodyJSON.case_ids))
         }
         process.exit(1)
       },
