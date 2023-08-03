@@ -58,6 +58,7 @@ async function startRun(caseIds = []) {
   }
 
   const testRailInfo = getTestRailConfig()
+  const authorization = getAuthorization(testRailInfo)
 
   // get all the case ids and remove any that dont exist in the defined project and suite
   let done = false
@@ -113,7 +114,6 @@ async function startRun(caseIds = []) {
     console.error('With %d case IDs', caseIds.length)
   }
   const addRunUrl = `${testRailInfo.host}/index.php?/api/v2/add_run/${testRailInfo.projectId}`
-  const authorization = getAuthorization(testRailInfo)
 
 
   let suiteId = args['--suite'] || testRailInfo.suiteId
