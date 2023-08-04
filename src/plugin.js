@@ -9,7 +9,6 @@ const {
 const { getCasesInTestRun, postTestResults } = require('./testrail-api')
 const { getTestCases } = require('./find-cases')
 
-let _testRailInfo
 let _runId
 let _caseIds
 
@@ -40,7 +39,7 @@ function parseResults(spec, results) {
       failed: 5,
     }
     // override status mapping if defined by user
-    const statusOverride = _testRailInfo.statusOverride
+    const statusOverride = getTestRailConfig().statusOverride
     const status = {
       ...defaultStatus,
       ...statusOverride,
@@ -87,7 +86,7 @@ async function sendTestResults(spec, results, skipPlugin = false) {
     _runId,
   )
 
-  return postTestResults(testRailResults, _runId, _testRailInfo).catch(
+  return postTestResults(testRailResults, _runId, getTestRailConfig()).catch(
     (err) => {
       console.error('Error sending TestRail results')
       console.error(err)
@@ -104,9 +103,7 @@ async function registerPlugin(skipPlugin = false) {
   }
   _runId = parseInt(getTestRunId())
 
-  _testRailInfo = getTestRailConfig()
-
-  _caseIds = await getCasesInTestRun(_runId, _testRailInfo)
+  _caseIds = await getCasesInTestRun(_runId, getTestRailConfig())
 
   if (_caseIds.length < 1) { throw new Error('expected run to have at least one case id') }
   debug('test run %d has %d cases', _runId, _caseIds.length)
