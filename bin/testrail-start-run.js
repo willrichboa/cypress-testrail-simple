@@ -6,6 +6,7 @@ const got = require('got')
 const findCypressSpecs = require('find-cypress-specs')
 const { getTestRailConfig, getAuthorization } = require('../src/get-config')
 const { findCases } = require('../src/find-cases')
+const fg = require('fast-glob')
 
 const args = arg(
   {
@@ -32,6 +33,11 @@ const args = arg(
   },
   { permissive: true },
 )
+function findSpecs(pattern) {
+  return fg(pattern, {
+    absolute: true,
+  })
+}
 async function startRun(caseIds = []) {
   const postBodyJSON = { name: '', description: '', include_all: true, case_ids: [], suite_id: undefined }
   let automation_code
@@ -82,7 +88,7 @@ async function startRun(caseIds = []) {
                 foundIds.push(element.id)
               }
             }
-          });
+          })
           if (!resp._links || !resp._links?.next || resp._links?.next === '') {
             done = true
             return
