@@ -1,14 +1,20 @@
 /// <reference types="cypress" />
 
-const {
-  getTestRailConfig,
-  getTestRunId,
-} = require('./get-config')
-const { getCasesInTestRun, postTestResults } = require('./testrail-api')
-const { getTestCases } = require('./find-cases')
+const { getTestRailConfig } = require('./get-config.cjs')
+const { getCasesInTestRun, postTestResults } = require('./testrail-api.cjs')
+const { getTestCases } = require('./find-cases.cjs')
 
 let _runId
 let _caseIds
+
+
+function getTestRunId(env = process.env) {
+  // try to read the test run id from the environment
+  if ('TESTRAIL_RUN_ID' in env && env.TESTRAIL_RUN_ID) {
+    return parseInt(env.TESTRAIL_RUN_ID)
+  }
+  throw new Error('TESTRAIL_RUN_ID is required')
+}
 
 function parseResults(spec, results) {
   // find only the tests with TestRail case id in the test name

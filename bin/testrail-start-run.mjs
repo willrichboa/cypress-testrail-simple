@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-const got = require('got')
-const { getTestRailConfig, getAuthorization } = require('./../src/get-config')
+import { got } from 'got'
+import { getTestRailConfig, getAuthorization } from '../src/get-config.cjs'
 
 async function startRun(
-  caseIds = [],
+  caseIds = process.env.TESTRAIL_CASE_IDS = [],
   name = process.env.TESTRAIL_RUN_NAME || 'Cypress Testrail Simple',
   description = process.env.TESTRAIL_RUN_DESCRIPTION || 'Started by Cypress TestRail Simple',
   automationCode = process.env.TESTRAIL_AUTOMATION_CODE || 0
@@ -81,10 +81,10 @@ async function startRun(
   if (testRailInfo.suiteId) {
     // let the user pass the suite ID like the TestRail shows it "S..."
     // or just the number
-    if (suiteId.startsWith('S')) {
-      suiteId = suiteId.substring(1)
+    if (testRailInfo.suiteId.startsWith('S')) {
+      testRailInfo.suiteId = testRailInfo.suiteId.substring(1)
     }
-    postBodyJSON.suite_id = Number(suiteId)
+    postBodyJSON.suite_id = Number(testRailInfo.suiteId)
   }
 
   // now create the run
@@ -115,4 +115,4 @@ async function startRun(
       },
     )
 }
-return startRun()
+startRun()

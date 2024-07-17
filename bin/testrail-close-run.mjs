@@ -1,8 +1,52 @@
 #!/usr/bin/env node
 
-const { getTestRailConfig } = require('./../src/get-config')
-const { getTestRun, closeTestRun } = require('./../src/testrail-api')
+import { getTestRailConfig, getAuthorization } from './../src/get-config.cjs'
+import { got } from 'got'
 
+async function getTestRun(runId, testRailInfo) {
+  const closeRunUrl = `${testRailInfo.host}/index.php?/api/v2/get_run/${runId}`
+  const authorization = getAuthorization(testRailInfo)
+
+  // @ts-ignore
+  return got(closeRunUrl, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      authorization,
+    },
+    // testrail could be in maintenance mode
+    retry: {
+      limit: 100,
+      statusCodes: [
+        409,
+        429
+      ],
+    }
+  }).json()
+}
+
+async function closeTestRun(runId, testRailInfo) {
+  console.log(
+    'closing the TestRail run %d for project %s',
+    runId,
+    testRailInfo.projectId,
+  )
+  const closeRunUrl = `${testRailInfo.host}/index.php?/api/v2/close_run/${runId}`
+  const authorization = getAuthorization(testRailInfo)
+
+  // @ts-ignore
+  return got(closeRunUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      authorization,
+    },
+    json: {
+      name: 'Started run',
+      description: 'Checking...',
+    },
+  }).json()
+}
 
 async function stopTestRailRun(runId = process.env.TESTRAIL_RUN_ID, force = process.env.TESTRAIL_RUN_FORCE_CLOSE || false) {
 
@@ -31,7 +75,7 @@ async function stopTestRailRun(runId = process.env.TESTRAIL_RUN_ID, force = proc
         )
 
         if (!force) {
-          console.log('will not close the run')
+          console.log('will not close the run as all tests are not done.  set TESTRAIL_RUN_FORCE_CLOSE=true to force close')
           return
         }
       }
@@ -64,4 +108,4 @@ async function stopTestRailRun(runId = process.env.TESTRAIL_RUN_ID, force = proc
         )
     })
 }
-return stopTestRailRun()
+stopTestRailRun()

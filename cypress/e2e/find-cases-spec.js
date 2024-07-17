@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { findCases, findCasesInSpec } from './../../src/find-cases'
+import { findCases, findCasesInSpec } from './../../src/find-cases.cjs'
 
 describe('Finding test case IDs', () => {
   it('finds test IDs in a single spec', () => {

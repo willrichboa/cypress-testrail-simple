@@ -1,4 +1,5 @@
 const { defineConfig } = require('cypress')
+const { registerPlugin } = require('./src/plugin.cjs')
 
 module.exports = defineConfig({
   fixturesFolder: false,
@@ -8,7 +9,7 @@ module.exports = defineConfig({
     supportFile: false,
     specPattern: 'cypress/e2e/**/*.{js,jsx,ts,tsx}',
     async setupNodeEvents(on, config) {
-      await require('./src/plugin').registerPlugin(on, config, (process.env.TESTRAIL_RUN_ID === ''))
+      await registerPlugin(on, config, (process.env.TESTRAIL_RUN_ID === ''))
       return config
     },
   },

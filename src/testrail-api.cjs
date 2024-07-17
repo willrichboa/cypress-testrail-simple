@@ -1,12 +1,4 @@
-const { getAuthorization } = require('./get-config')
-
-const TestRailStatus = {
-  Passed: 1,
-  Blocked: 2,
-  Untested: 3,
-  Retest: 4,
-  Failed: 5,
-}
+const { getAuthorization } = require('./get-config.cjs')
 
 const TestRailStatusName = [
   null,
@@ -16,31 +8,6 @@ const TestRailStatusName = [
   'Retest',
   'Failed',
 ]
-
-async function getTestRun(runId, testRailInfo) {
-  const closeRunUrl = `${testRailInfo.host}/index.php?/api/v2/get_run/${runId}`
-  const authorization = getAuthorization(testRailInfo)
-
-  // @ts-ignore
-  const gotResult = await require('got')(closeRunUrl, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      authorization,
-    },
-    // testrail could be in maintenance mode
-    retry: {
-      limit: 100,
-      statusCodes: [
-        409,
-        429
-      ],
-    }
-  })
-  const json = gotResult.json()
-
-  return json
-}
 
 /**
  * Gets the test results for the given TestRail test run.
@@ -107,62 +74,12 @@ async function getCasesInTestRun(runId, testRailInfo) {
   return cases.map((c) => c.case_id)
 }
 
-async function closeTestRun(runId, testRailInfo) {
-  console.log(
-    'closing the TestRail run %d for project %s',
-    runId,
-    testRailInfo.projectId,
-  )
-  const closeRunUrl = `${testRailInfo.host}/index.php?/api/v2/close_run/${runId}`
-  const authorization = getAuthorization(testRailInfo)
-
-  // @ts-ignore
-  const gotResult = await require('got')(closeRunUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      authorization,
-    },
-    json: {
-      name: 'Started run',
-      description: 'Checking...',
-    },
-  })
-  const json = gotResult.json()
-
-  return json
-}
-
-async function getTestSuite(suiteId, testRailInfo) {
-  const getSuiteUrl = `${testRailInfo.host}/index.php?/api/v2/get_cases/${testRailInfo.projectId}&suite_id=${suiteId}`
-  const authorization = getAuthorization(testRailInfo)
-
-  // @ts-ignore
-  const gotResult = await require('got')(getSuiteUrl, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-      authorization,
-    },
-    // testrail could be in maintenance mode
-    retry: {
-      limit: 100,
-      statusCodes: [
-        409,
-        429
-      ],
-    }
-  })
-  const json = gotResult.json()
-
-  return json
-}
 async function postTestResults(resultsToSend, runID, testRailInfo) {
   const addResultsUrl = `${testRailInfo.host}/index.php?/api/v2/add_results_for_cases/${runID}`
   const authorization = getAuthorization(testRailInfo)
 
   // @ts-ignore
-  const gotResult = await require('got')(addResultsUrl, {
+  return require('got')(addResultsUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -171,19 +88,10 @@ async function postTestResults(resultsToSend, runID, testRailInfo) {
     json: {
       results: resultsToSend,
     },
-  })
-  const json = gotResult.json()
-
-  return json
+  }).json()
 }
 
 module.exports = {
-  TestRailStatus,
-  TestRailStatusName,
-  getTestRun,
-  closeTestRun,
-  getTestSuite,
-  getTestRunResults,
   getCasesInTestRun,
   postTestResults,
 }
