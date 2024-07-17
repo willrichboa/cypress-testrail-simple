@@ -90,4 +90,3 @@ export async function postTestResults(resultsToSend, runID, testRailInfo) {
     },
   }).json()
 }
-

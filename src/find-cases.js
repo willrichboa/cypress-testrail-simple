@@ -4,7 +4,7 @@ import { getTestNames, filterByEffectiveTags } from 'find-test-names'
  * Returns the TestRail case id number (if any) from the given full test title
  * @param {string} testTitle
  */
-export function getTestCases(testTitle: string) {
+export function getTestCases(testTitle) {
   const re = /\bC(?<caseId>\d+)\b/g
   const matches = [...testTitle.matchAll(re)]
   const ids = matches.map((m) => Number(m.groups.caseId))
@@ -15,17 +15,17 @@ export function getTestCases(testTitle: string) {
  * Gives an array, removes duplicates and sorts it
  */
 function uniqueSorted(list) {
-  return Array.from(new Set(list)).sort() as string[]
+  return Array.from(new Set(list)).sort()
 }
 
 /**
  * Finds the test case IDs in the test titles.
  * @example "C101: Test case title" => "101"
  */
-export function findCasesInSpec(spec: string, readSpec = readFileSync, tagged: string[]) {
+export function findCasesInSpec(spec, readSpec = readFileSync, tagged) {
   const source = readSpec(spec, 'utf8')
 
-  let testNames: string[] = []
+  let testNames = []
   if (Array.isArray(tagged) && tagged.length > 0) {
     const filteredTests = filterByEffectiveTags(source, tagged)
     testNames = filteredTests.map((t) => t.name)
@@ -43,7 +43,7 @@ export function findCasesInSpec(spec: string, readSpec = readFileSync, tagged: s
   return uniqueSorted(ids)
 }
 
-export function findCases(specs: string[], readSpec = readFileSync, tagged: string[]) {
+export function findCases(specs, readSpec = readFileSync, tagged) {
   // find case Ids in each spec and flatten into a single array
   const allCaseIds = specs
     .map((spec) => findCasesInSpec(spec, readSpec, tagged))
