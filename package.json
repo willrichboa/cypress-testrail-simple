@@ -1,6 +1,6 @@
 {
   "name": "cypress-testrail-simple",
-  "version": "0.0.0-development",
+  "version": "0.0.1-development",
   "description": "Simple upload of Cypress test results to TestRail",
   "files": [
     "src",
@@ -16,16 +16,10 @@
   "author": "W. Rich",
   "license": "MIT",
   "devDependencies": {
-    "console.table": "^0.10.0",
-    "cypress": "^12.14.0",
-    "semantic-release": "^21.0.5"
+    "cypress": "13.13.0"
   },
   "dependencies": {
-    "arg": "^5.0.1",
-    "debug": "^4.3.2",
-    "fast-glob": "^3.3.1",
-    "find-cypress-specs": "^1.31.3",
-    "find-test-names": "^1.28.3",
-    "got": "^11.8.2"
+    "find-test-names": "1.28.23",
+    "got": "14.4.1"
   }
 }

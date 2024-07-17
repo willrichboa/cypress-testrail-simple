@@ -1,7 +1,5 @@
 /// <reference types="cypress" />
 
-const debug = require('debug')('cypress-testrail-simple/plugin')
-const got = require('got')
 const {
   getTestRailConfig,
   getTestRunId,
@@ -13,8 +11,6 @@ let _runId
 let _caseIds
 
 function parseResults(spec, results) {
-  debug(spec)
-  debug(results)
   // find only the tests with TestRail case id in the test name
   const testRailResults = []
   results.tests.forEach((result) => {
@@ -60,17 +56,9 @@ function parseResults(spec, results) {
         comment: `**Automated Test Title**: ${result.title.join('>')}${errorVal}`
       }
 
-      if (_caseIds.length && !_caseIds.includes(case_id)) {
-        debug('case %d is not in test run %d', case_id, _runId)
-      } else {
-        testRailResults.push(testRailResult)
-      }
+      testRailResults.push(testRailResult)
     })
   })
-  if (testRailResults.length) {
-    debug('TestRail results in %s', spec.relative)
-    console.table(testRailResults)
-  }
   return testRailResults
 }
 async function sendTestResults(spec, results, skipPlugin = false) {
@@ -98,7 +86,7 @@ async function sendTestResults(spec, results, skipPlugin = false) {
 async function registerPlugin(skipPlugin = false) {
   if (skipPlugin) { return }
   if (!process.env.TESTRAIL_RUN_ID) {
-    debug('test run id did not exist')
+    console.log('testrail run id not found')
     return
   }
   _runId = parseInt(getTestRunId())
@@ -106,8 +94,6 @@ async function registerPlugin(skipPlugin = false) {
   _caseIds = await getCasesInTestRun(_runId, getTestRailConfig())
 
   if (_caseIds.length < 1) { throw new Error('expected run to have at least one case id') }
-  debug('test run %d has %d cases', _runId, _caseIds.length)
-  debug(_caseIds)
 }
 
 module.exports = { registerPlugin, parseResults, sendTestResults }

@@ -1,5 +1,4 @@
 // @ts-check
-const debug = require('debug')('cypress-testrail-simple')
 
 function safelyParseJson(str) {
   try {
@@ -10,8 +9,6 @@ function safelyParseJson(str) {
 }
 
 function getTestRailConfig(env = process.env) {
-  const debug = require('debug')('cypress-testrail-simple')
-
   if (!env.TESTRAIL_HOST) {
     throw new Error('TESTRAIL_HOST is required')
   }
@@ -37,9 +34,6 @@ function getTestRailConfig(env = process.env) {
     suiteId: process.env.TESTRAIL_SUITEID,
     statusOverride: safelyParseJson(process.env.TESTRAIL_STATUS_OVERRIDE),
   }
-  debug('test rail info with the password masked')
-  debug('%o', { ...testRailInfo, password: '<masked>' })
-
   return testRailInfo
 }
 

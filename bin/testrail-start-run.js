@@ -1,86 +1,48 @@
 #!/usr/bin/env node
 
-const fs = require('fs')
-const arg = require('arg')
 const got = require('got')
-const findCypressSpecs = require('find-cypress-specs')
-const { getTestRailConfig, getAuthorization } = require('../src/get-config')
-const { findCases } = require('../src/find-cases')
-const fg = require('fast-glob')
+const { getTestRailConfig, getAuthorization } = require('./../src/get-config')
 
-const args = arg(
-  {
-    '--spec': String,
-    '--name': String,
-    '--description': String,
-    '--suite': String,
-    // find the specs automatically using
-    // https://github.com/bahmutov/find-cypress-specs
-    '--find-specs': Boolean,
-    // filter all found specs by the given tag(s)
-    '--tagged': String,
-    // do not contact testrail, display info
-    '--dry': Boolean,
-    // do not open the test run, just find everything
-    '--dry-tr': Boolean,
-    // only get automated tests with the matching custom_automation_id
-    '--auto': Number,
-    // aliases
-    '-s': '--spec',
-    '-n': '--name',
-    '-d': '--description',
-    '-st': '--suite',
-  },
-  { permissive: true },
-)
-function findSpecs(pattern) {
-  return fg(pattern, {
-    absolute: true,
-  })
-}
-async function startRun(caseIds = []) {
-  const postBodyJSON = { name: '', description: '', include_all: true, case_ids: [], suite_id: undefined }
-  let automation_code
+async function startRun(
+  caseIds = [],
+  name = process.env.TESTRAIL_RUN_NAME || 'Cypress Testrail Simple',
+  description = process.env.TESTRAIL_RUN_DESCRIPTION || 'Started by Cypress TestRail Simple',
+  automationCode = process.env.TESTRAIL_AUTOMATION_CODE || 0
+) {
+  const testRailInfo = getTestRailConfig()
+  const authorization = getAuthorization(testRailInfo)
+  const postBodyJSON = {
+    name: name,
+    description: description,
+    include_all: automationCode === 0,
+    case_ids: caseIds,
+    suite_id: process.env.TESTRAIL_SUITEID || undefined
+  }
+
   // dedupe the user provided case id list
   if (caseIds && caseIds.length > 0) {
     const uniqueCaseIds = [...new Set(caseIds)]
     if (uniqueCaseIds.length !== caseIds.length) {
       console.error('Removed duplicate case IDs')
       console.error('have %d case IDs', uniqueCaseIds.length)
+      postBodyJSON.include_all = false
     }
-    postBodyJSON.include_all = false
     postBodyJSON.case_ids = uniqueCaseIds
   }
 
-  let auto = args['--auto']
-  if (auto) {
-    automation_code = Number(auto)
-    postBodyJSON.include_all = false
-  }
-  if (args['--dry']) {
-    console.log('Dry run, not starting a new run')
-    console.log('automation code', automation_code)
-    console.log('POST body so far')
-    console.info(postBodyJSON)
-    return
-  }
-
-  const testRailInfo = getTestRailConfig()
-  const authorization = getAuthorization(testRailInfo)
-
-  // get all the case ids and remove any that dont exist in the defined project and suite
+  // get all the case ids and remove any that don't exist in the defined project and suite
   let done = false
   const foundIds = []
   const baseURL = `${testRailInfo.host}/index.php?`
-  let getCasesURL = `${baseURL}/api/v2/get_cases/${testRailInfo.projectId}&suite_id=${postBodyJSON.suite_id || process.env.TESTRAIL_SUITEID}`
+  let getCasesURL = `${baseURL}/api/v2/get_cases/${testRailInfo.projectId}&suite_id=${postBodyJSON.suite_id}`
   while (done === false) {
     await got(getCasesURL, { method: 'GET', headers: { authorization } })
       .json()
       .then(
         (resp) => {
           resp.cases?.forEach(element => {
-            if (automation_code) {
-              if (element.is_deleted === 0 && element.custom_automation_type === automation_code) {
+            if (automationCode && automationCode !== 0) {
+              if (element.is_deleted === 0 && element.custom_automation_type === automationCode) {
                 foundIds.push(element.id)
               }
             } else {
@@ -113,30 +75,16 @@ async function startRun(caseIds = []) {
     postBodyJSON.case_ids = foundIds
   }
 
-  // optional arguments
-  postBodyJSON.name = args['--name'] || args._[0]
-  postBodyJSON.description = args['--description'] || args._[1]
   const addRunUrl = `${testRailInfo.host}/index.php?/api/v2/add_run/${testRailInfo.projectId}`
 
 
-  let suiteId = args['--suite'] || testRailInfo.suiteId
-  if (suiteId) {
+  if (testRailInfo.suiteId) {
     // let the user pass the suite ID like the TestRail shows it "S..."
     // or just the number
     if (suiteId.startsWith('S')) {
       suiteId = suiteId.substring(1)
     }
     postBodyJSON.suite_id = Number(suiteId)
-    // await getTestSuite(suiteId, testRailInfo)
-  }
-
-  if (args['--dry-tr']) {
-    console.log('Dry run, not starting a new run')
-    console.log('addRunURL', addRunUrl)
-    console.log('automation code', automation_code)
-    console.log('POST body')
-    console.info(postBodyJSON)
-    return
   }
 
   // now create the run
@@ -167,28 +115,4 @@ async function startRun(caseIds = []) {
       },
     )
 }
-
-if (args['--find-specs']) {
-  const specs = findCypressSpecs.getSpecs()
-
-  let tagged
-  if (args['--tagged']) {
-    tagged = args['--tagged']
-      .split(',')
-      .map((s) => s.trim())
-      .filter(Boolean)
-  }
-  const caseIds = findCases(specs, fs.readFileSync, tagged)
-  runConfig
-  return startRun(caseIds)
-
-}
-if (args['--spec']) {
-  return findSpecs(args['--spec'])
-    .then((specs) => {
-      const caseIds = findCases(specs)
-      return startRun(caseIds)
-    })
-}
-// start a new test run for all test cases
 return startRun()

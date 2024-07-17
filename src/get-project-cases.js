@@ -1,5 +1,4 @@
 // @ts-check
-const debug = require('debug')('cypress-testrail-simple')
 const { getAuthorization } = require('./get-config')
 const got = require('got')
 
@@ -9,17 +8,10 @@ const got = require('got')
  * a combined list, sorted by ID.
  */
 async function getProjectCases({ testRailInfo }) {
-  debug(
-    'fetching cases for TestRail project %s',
-    testRailInfo.projectId,
-  )
-
   const testRailApi = `${testRailInfo.host}/index.php?`
-  debug('testRailApi', testRailApi)
 
   // https://www.gurock.com/testrail/docs/api/reference/cases/#getcases
   const getCasesUrl = `/api/v2/get_cases/${testRailInfo.projectId}&limit=200`
-  debug('get cases url: %s', getCasesUrl)
   const authorization = getAuthorization(testRailInfo)
 
   // we will store the result in this list
@@ -33,10 +25,16 @@ async function getProjectCases({ testRailInfo }) {
         'Content-Type': 'application/json',
         authorization,
       },
+      // testrail could be in maintenance mode
+      retry: {
+        limit: 100,
+        statusCodes: [
+          409,
+          429
+        ],
+      }
     }).json()
 
-    debug('response from the get_cases')
-    debug('%o', json)
     const { cases } = json
     const list = cases.map((c) => {
       return {

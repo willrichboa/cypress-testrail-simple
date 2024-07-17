@@ -1,14 +1,8 @@
 // @ts-check
-const debug = require('debug')('cypress-testrail-simple')
 const { getAuthorization } = require('./get-config')
 const got = require('got')
 
 async function getCase({ testRailInfo, caseId }) {
-  debug(
-    'fetching cases for TestRail project %s',
-    testRailInfo.projectId,
-  )
-
   const url = `${testRailInfo.host}/index.php?/api/v2/get_case/${caseId}`
   const authorization = getAuthorization(testRailInfo)
 
@@ -19,6 +13,14 @@ async function getCase({ testRailInfo, caseId }) {
       'Content-Type': 'application/json',
       authorization,
     },
+    // testrail could be in maintenance mode
+    retry: {
+      limit: 100,
+      statusCodes: [
+        409,
+        429
+      ],
+    }
   }).json()
 }
 
