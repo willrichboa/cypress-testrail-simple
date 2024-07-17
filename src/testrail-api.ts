@@ -1,4 +1,4 @@
-const { getAuthorization } = require('./get-config.cjs')
+import { getAuthorization } from "./get-config.js"
 
 const TestRailStatusName = [
   null,
@@ -13,7 +13,7 @@ const TestRailStatusName = [
  * Gets the test results for the given TestRail test run.
  * Each result is an object with a case ID and a status ID.
  */
-async function getTestRunResults(runId, testRailInfo) {
+export async function getTestRunResults(runId, testRailInfo) {
   const testRailApi = `${testRailInfo.host}/index.php?`
 
   // if there are more test results, need to call the API multiple times
@@ -69,12 +69,12 @@ async function getTestRunResults(runId, testRailInfo) {
 /**
  * Returns just the list of case IDs listed in the given TestRail test run
  */
-async function getCasesInTestRun(runId, testRailInfo) {
+export async function getCasesInTestRun(runId, testRailInfo) {
   const cases = await getTestRunResults(runId, testRailInfo)
   return cases.map((c) => c.case_id)
 }
 
-async function postTestResults(resultsToSend, runID, testRailInfo) {
+export async function postTestResults(resultsToSend, runID, testRailInfo) {
   const addResultsUrl = `${testRailInfo.host}/index.php?/api/v2/add_results_for_cases/${runID}`
   const authorization = getAuthorization(testRailInfo)
 
@@ -91,7 +91,3 @@ async function postTestResults(resultsToSend, runID, testRailInfo) {
   }).json()
 }
 
-module.exports = {
-  getCasesInTestRun,
-  postTestResults,
-}

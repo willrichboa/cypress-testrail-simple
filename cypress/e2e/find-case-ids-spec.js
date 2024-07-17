@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { getTestCases } from './../../src/find-cases.cjs'
+import { getTestCases } from './../../src/find-cases'
 
 describe('getTestCases', () => {
   it('returns an undefined without test cases in the title', () => {

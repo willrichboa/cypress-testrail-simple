@@ -1,5 +1,3 @@
-// @ts-check
-
 function safelyParseJson(str) {
   try {
     return JSON.parse(str)
@@ -8,7 +6,7 @@ function safelyParseJson(str) {
   }
 }
 
-function getTestRailConfig(env = process.env) {
+export function getTestRailConfig(env = process.env) {
   if (!env.TESTRAIL_HOST) {
     throw new Error('TESTRAIL_HOST is required')
   }
@@ -37,14 +35,9 @@ function getTestRailConfig(env = process.env) {
   return testRailInfo
 }
 
-function getAuthorization(testRailInfo) {
+export function getAuthorization(testRailInfo) {
   const authorization = `Basic ${Buffer.from(
     `${testRailInfo.username}:${testRailInfo.password}`,
   ).toString('base64')}`
   return authorization
-}
-
-module.exports = {
-  getTestRailConfig,
-  getAuthorization
 }

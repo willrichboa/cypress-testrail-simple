@@ -1,5 +1,5 @@
 /// <reference types="cypress" />
-import { findCases, findCasesInSpec } from './../../src/find-cases.cjs'
+import { findCases, findCasesInSpec } from './../../src/find-cases'
 
 describe('Finding test case IDs', () => {
   it('finds test IDs in a single spec', () => {
@@ -81,7 +81,7 @@ describe('Finding test case IDs', () => {
   it('ignores stray Cs', () => {
     const source = `
       // some link /foo/C1
-      // another linke C2/
+      // another link C2/
     `
     const readFile = cy.stub().returns(source)
     const filename = 'test-spec.js'

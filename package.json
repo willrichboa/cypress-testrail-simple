@@ -16,11 +16,13 @@
   "author": "W. Rich",
   "license": "MIT",
   "devDependencies": {
+    "@types/node": "^20.14.11",
     "cypress": "13.13.0"
   },
   "dependencies": {
     "find-test-names": "1.28.23",
-    "got": "14.4.1"
+    "got": "14.4.1",
+    "typescript": "5.5.3"
   },
   "type": "module"
 }

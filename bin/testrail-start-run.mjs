@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
-import { got } from 'got'
-import { getTestRailConfig, getAuthorization } from '../src/get-config.cjs'
+import { getAuthorization, getTestRailConfig } from "./get-config.mjs"
+import { HTTPResponseError } from './HTTPResponseError.mjs'
 
 async function startRun(
-  caseIds = process.env.TESTRAIL_CASE_IDS = [],
+  caseIds = process.env.TESTRAIL_CASE_IDS || [],
   name = process.env.TESTRAIL_RUN_NAME || 'Cypress Testrail Simple',
   description = process.env.TESTRAIL_RUN_DESCRIPTION || 'Started by Cypress TestRail Simple',
   automationCode = process.env.TESTRAIL_AUTOMATION_CODE || 0
@@ -36,8 +36,11 @@ async function startRun(
   const baseURL = `${testRailInfo.host}/index.php?`
   let getCasesURL = `${baseURL}/api/v2/get_cases/${testRailInfo.projectId}&suite_id=${postBodyJSON.suite_id}`
   while (done === false) {
-    await got(getCasesURL, { method: 'GET', headers: { authorization } })
-      .json()
+    const response = await fetch(getCasesURL, { method: 'GET', headers: { authorization } })
+    if (!response.ok) {
+      throw new HTTPResponseError(response)
+    }
+    response.json()
       .then(
         (resp) => {
           resp.cases?.forEach(element => {
@@ -62,7 +65,8 @@ async function startRun(
   const temp = []
   // compare ids from testrail with user provided list
   // add any that match
-  if (caseIds && caseIds > 0) {
+  if (Array.isArray(caseIds) && caseIds.length > 0) {
+    postBodyJSON.case_ids = caseIds
     postBodyJSON.case_ids.forEach((cid) => {
       if (foundIds.includes(cid)) {
         temp.push(cid)
@@ -84,19 +88,22 @@ async function startRun(
     if (testRailInfo.suiteId.startsWith('S')) {
       testRailInfo.suiteId = testRailInfo.suiteId.substring(1)
     }
-    postBodyJSON.suite_id = Number(testRailInfo.suiteId)
+    postBodyJSON.suite_id = `${Number(testRailInfo.suiteId)}`
   }
 
   // now create the run
-  return got(addRunUrl, {
+  const response = await fetch(addRunUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       authorization,
     },
-    json: postBodyJSON,
+    body: JSON.stringify(postBodyJSON),
   })
-    .json()
+  if (!response.ok) {
+    throw new HTTPResponseError(response)
+  }
+  return response.json()
     .then(
       (resp) => {
         // console.info(resp)

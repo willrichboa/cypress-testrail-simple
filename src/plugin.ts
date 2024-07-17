@@ -1,12 +1,9 @@
-/// <reference types="cypress" />
-
-const { getTestRailConfig } = require('./get-config.cjs')
-const { getCasesInTestRun, postTestResults } = require('./testrail-api.cjs')
-const { getTestCases } = require('./find-cases.cjs')
+import { getTestRailConfig } from './get-config.js'
+import { getCasesInTestRun, postTestResults } from './testrail-api.js'
+import { getTestCases } from './find-cases.js'
 
 let _runId
 let _caseIds
-
 
 function getTestRunId(env = process.env) {
   // try to read the test run id from the environment
@@ -16,7 +13,7 @@ function getTestRunId(env = process.env) {
   throw new Error('TESTRAIL_RUN_ID is required')
 }
 
-function parseResults(spec, results) {
+export function parseResults(spec, results) {
   // find only the tests with TestRail case id in the test name
   const testRailResults = []
   results.tests.forEach((result) => {
@@ -67,7 +64,8 @@ function parseResults(spec, results) {
   })
   return testRailResults
 }
-async function sendTestResults(spec, results, skipPlugin = false) {
+
+export async function sendTestResults(spec, results, skipPlugin = false) {
   if (skipPlugin) { return }
   const testRailResults = parseResults(spec, results)
 
@@ -89,17 +87,16 @@ async function sendTestResults(spec, results, skipPlugin = false) {
     },
   )
 }
-async function registerPlugin(skipPlugin = false) {
+
+export async function registerPlugin(skipPlugin = false) {
   if (skipPlugin) { return }
   if (!process.env.TESTRAIL_RUN_ID) {
     console.log('testrail run id not found')
     return
   }
-  _runId = parseInt(getTestRunId())
+  _runId = getTestRunId()
 
   _caseIds = await getCasesInTestRun(_runId, getTestRailConfig())
 
   if (_caseIds.length < 1) { throw new Error('expected run to have at least one case id') }
 }
-
-module.exports = { registerPlugin, parseResults, sendTestResults }

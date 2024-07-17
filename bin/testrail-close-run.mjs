@@ -1,28 +1,23 @@
 #!/usr/bin/env node
 
-import { getTestRailConfig, getAuthorization } from './../src/get-config.cjs'
-import { got } from 'got'
+import { getAuthorization, getTestRailConfig } from "./get-config.mjs"
+import { HTTPResponseError } from './HTTPResponseError.mjs'
 
 async function getTestRun(runId, testRailInfo) {
   const closeRunUrl = `${testRailInfo.host}/index.php?/api/v2/get_run/${runId}`
   const authorization = getAuthorization(testRailInfo)
 
-  // @ts-ignore
-  return got(closeRunUrl, {
+  const response = await fetch(closeRunUrl, {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       authorization,
-    },
-    // testrail could be in maintenance mode
-    retry: {
-      limit: 100,
-      statusCodes: [
-        409,
-        429
-      ],
     }
-  }).json()
+  })
+  if (!response.ok) {
+    throw new HTTPResponseError(response)
+  }
+  return response.json()
 }
 
 async function closeTestRun(runId, testRailInfo) {
@@ -34,18 +29,21 @@ async function closeTestRun(runId, testRailInfo) {
   const closeRunUrl = `${testRailInfo.host}/index.php?/api/v2/close_run/${runId}`
   const authorization = getAuthorization(testRailInfo)
 
-  // @ts-ignore
-  return got(closeRunUrl, {
+  const response = await fetch(closeRunUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       authorization,
     },
-    json: {
+    body: JSON.stringify({
       name: 'Started run',
       description: 'Checking...',
-    },
-  }).json()
+    }),
+  })
+  if (!response.ok) {
+    throw new HTTPResponseError(response)
+  }
+  return response.json()
 }
 
 async function stopTestRailRun(runId = process.env.TESTRAIL_RUN_ID, force = process.env.TESTRAIL_RUN_FORCE_CLOSE || false) {
