@@ -1,6 +1,6 @@
-import { getTestRailConfig } from './get-config.js'
-import { getCasesInTestRun, postTestResults } from './testrail-api.js'
-import { getTestCases } from './find-cases.js'
+const { getTestRailConfig } = require('./get-config.js')
+const { getCasesInTestRun, postTestResults } = require('./testrail-api.js')
+const { getTestCases } = require('./find-cases.js')
 
 let _runId
 let _caseIds
@@ -13,7 +13,7 @@ function getTestRunId(env = process.env) {
   throw new Error('TESTRAIL_RUN_ID is required')
 }
 
-export function parseResults(spec, results) {
+function parseResults(spec, results) {
   // find only the tests with TestRail case id in the test name
   const testRailResults = []
   results.tests.forEach((result) => {
@@ -65,7 +65,7 @@ export function parseResults(spec, results) {
   return testRailResults
 }
 
-export async function sendTestResults(spec, results, skipPlugin = false) {
+async function sendTestResults(spec, results, skipPlugin = false) {
   if (skipPlugin) { return }
   const testRailResults = parseResults(spec, results)
 
@@ -88,7 +88,7 @@ export async function sendTestResults(spec, results, skipPlugin = false) {
   )
 }
 
-export async function registerPlugin(skipPlugin = false) {
+async function registerPlugin(skipPlugin = false) {
   if (skipPlugin) { return }
   if (!process.env.TESTRAIL_RUN_ID) {
     console.log('testrail run id not found')
@@ -99,4 +99,10 @@ export async function registerPlugin(skipPlugin = false) {
   _caseIds = await getCasesInTestRun(_runId, getTestRailConfig())
 
   if (_caseIds.length < 1) { throw new Error('expected run to have at least one case id') }
+}
+
+module.exports = {
+  parseResults,
+  sendTestResults,
+  registerPlugin
 }

@@ -21,8 +21,6 @@
   },
   "dependencies": {
     "find-test-names": "1.28.23",
-    "got": "14.4.1",
     "typescript": "5.5.3"
-  },
-  "type": "module"
+  }
 }
