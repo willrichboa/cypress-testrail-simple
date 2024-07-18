@@ -1,6 +1,6 @@
+const { findCases } = require('../bin/find-cases.mjs')
 const { getTestRailConfig } = require('./get-config.js')
 const { getCasesInTestRun, postTestResults } = require('./testrail-api.js')
-const { getTestCases } = require('./find-cases.js')
 
 let _runId
 let _caseIds
@@ -11,6 +11,16 @@ function getTestRunId(env = process.env) {
     return parseInt(env.TESTRAIL_RUN_ID)
   }
   throw new Error('TESTRAIL_RUN_ID is required')
+}
+/**
+ * Returns the TestRail case id number (if any) from the given full test title
+ * @param {string} testTitle
+ */
+function getTestCases(testTitle) {
+  const re = /\bC(?<caseId>\d+)\b/g
+  const matches = [...testTitle.matchAll(re)]
+  const ids = matches.map((m) => Number(m.groups.caseId))
+  return Array.from(new Set(ids)).sort()
 }
 
 function parseResults(spec, results) {
@@ -104,5 +114,6 @@ async function registerPlugin(skipPlugin = false) {
 module.exports = {
   parseResults,
   sendTestResults,
-  registerPlugin
+  registerPlugin,
+  getTestCases
 }

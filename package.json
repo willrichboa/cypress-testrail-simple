@@ -16,10 +16,11 @@
   "author": "W. Rich",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^20.14.11",
+    "@types/node": "20.14.11",
     "cypress": "13.13.0"
   },
   "dependencies": {
+    "fast-glob": "3.3.2",
     "find-test-names": "1.28.23",
     "typescript": "5.5.3"
   }

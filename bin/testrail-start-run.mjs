@@ -1,23 +1,27 @@
 #!/usr/bin/env node
 
+import { findCases } from './find-cases.mjs'
 import { getAuthorization, getTestRailConfig } from "./get-config.mjs"
 import { HTTPResponseError } from './HTTPResponseError.mjs'
+import fg from 'fast-glob'
 
-async function startRun(
-  caseIds = process.env.TESTRAIL_CASE_IDS,
-  name = process.env.TESTRAIL_RUN_NAME || 'Cypress Testrail Simple',
-  description = process.env.TESTRAIL_RUN_DESCRIPTION || 'Started by Cypress TestRail Simple',
-  automationCode = process.env.TESTRAIL_AUTOMATION_CODE || 0
-) {
+function findSpecs(pattern) {
+  return fg(pattern, {
+    absolute: true,
+  })
+}
+
+async function startRun() {
+  let specs = process.env.TESTRAIL_SPEC
+  const name = process.env.TESTRAIL_RUN_NAME || 'Cypress Testrail Simple'
+  const description = process.env.TESTRAIL_RUN_DESCRIPTION || 'Started by Cypress TestRail Simple'
+  const automationCode = process.env.TESTRAIL_AUTOMATION_CODE || 0
   const testRailInfo = getTestRailConfig()
   const authorization = getAuthorization(testRailInfo)
   let postBodyJSON = {
     name: name,
     description: description,
-    include_all: automationCode === 0,
-  }
-  if (caseIds) {
-    postBodyJSON.case_ids = caseIds
+    include_all: false,
   }
   // let the user pass the suite ID like TestRail shows it "S..."
   // or just the number
@@ -33,17 +37,9 @@ async function startRun(
     }
     postBodyJSON.suite_id = `${Number(suiteId)}`
   }
-
-  // dedupe the user provided case id list
-  if (caseIds && caseIds.length > 0) {
-    const uniqueCaseIds = [...new Set(caseIds)]
-    if (uniqueCaseIds.length !== caseIds.length) {
-      console.error('Removed duplicate case IDs')
-      console.error('have %d case IDs', uniqueCaseIds.length)
-      postBodyJSON.include_all = false
-    }
-    postBodyJSON.case_ids = uniqueCaseIds
-  }
+  const foundSpecs = await findSpecs(specs)
+  postBodyJSON.case_ids = findCases(foundSpecs)
+  if (postBodyJSON.case_ids.length < 1) { throw new Error('can not open new run with no case_ids') }
 
   // get all the case ids and remove any that don't exist in the defined project and suite
   let done = false
@@ -59,7 +55,7 @@ async function startRun(
       .then(
         (resp) => {
           resp.cases?.forEach(element => {
-            if (automationCode && automationCode !== 0) {
+            if (automationCode && automationCode > 0) {
               if (element.is_deleted === 0 && element.custom_automation_type === automationCode) {
                 foundIds.push(element.id)
               }
@@ -78,21 +74,14 @@ async function startRun(
       )
   }
   const temp = []
-  // compare ids from testrail with user provided list
-  // add any that match
-  if (Array.isArray(caseIds) && caseIds.length > 0) {
-    postBodyJSON.case_ids = caseIds
-    postBodyJSON.case_ids.forEach((cid) => {
-      if (foundIds.includes(cid)) {
-        temp.push(cid)
-        return
-      }
-    })
-    postBodyJSON.case_ids = temp
-  } else {
-    // if no user provided list then use all found
-    postBodyJSON.case_ids = foundIds
-  }
+  postBodyJSON.case_ids.forEach((cid) => {
+    if (foundIds.includes(cid)) {
+      temp.push(cid)
+      return
+    }
+  })
+  postBodyJSON.case_ids = temp
+  if (postBodyJSON.case_ids.length < 1) { console.error('no matching case ids found in TestRail.  abort run start'); return }
 
   const addRunUrl = `${testRailInfo.host}/index.php?/api/v2/add_run/${testRailInfo.projectId}`
 
