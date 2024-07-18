@@ -14,6 +14,7 @@ export TESTRAIL_PROJECTID=$TESTRAIL_PROJECTID
 export TESTRAIL_SUITEID=$TESTRAIL_SUITEID
 export TESTRAIL_RUN_ID=""
 export TESTRAIL_RUN_FORCE_CLOSE=true
+export TESTRAIL_AUTOMATION_CODE=$TESTRAIL_AUTOMATION_CODE
 
 ## starts a test rail test run and stores the run id in the env var
 if [ -z "$TESTRAIL_HOST" ] || [ -z "$TESTRAIL_USERNAME" ] || [ -z "$TESTRAIL_PASSWORD" ] || [ -z "$TESTRAIL_PROJECTID" ] || [ -z "$TESTRAIL_SUITEID" ]; then

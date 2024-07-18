@@ -4,19 +4,34 @@ import { getAuthorization, getTestRailConfig } from "./get-config.mjs"
 import { HTTPResponseError } from './HTTPResponseError.mjs'
 
 async function startRun(
-  caseIds = process.env.TESTRAIL_CASE_IDS || [],
+  caseIds = process.env.TESTRAIL_CASE_IDS,
   name = process.env.TESTRAIL_RUN_NAME || 'Cypress Testrail Simple',
   description = process.env.TESTRAIL_RUN_DESCRIPTION || 'Started by Cypress TestRail Simple',
   automationCode = process.env.TESTRAIL_AUTOMATION_CODE || 0
 ) {
   const testRailInfo = getTestRailConfig()
   const authorization = getAuthorization(testRailInfo)
-  const postBodyJSON = {
+  let postBodyJSON = {
     name: name,
     description: description,
     include_all: automationCode === 0,
-    case_ids: caseIds,
-    suite_id: process.env.TESTRAIL_SUITEID || undefined
+  }
+  if (caseIds) {
+    postBodyJSON.case_ids = caseIds
+  }
+  // let the user pass the suite ID like TestRail shows it "S..."
+  // or just the number
+  if (testRailInfo.suiteId) {
+    if (testRailInfo.suiteId.startsWith('S')) {
+      testRailInfo.suiteId = testRailInfo.suiteId.substring(1)
+    }
+    postBodyJSON.suite_id = `${Number(testRailInfo.suiteId)}`
+  } else if (process.env.TESTRAIL_SUITEID && process.env.TESTRAIL_SUITEID !== '') {
+    const suiteId = process.env.TESTRAIL_SUITEID
+    if (suiteId.startsWith('S')) {
+      suiteId = suiteId.substring(1)
+    }
+    postBodyJSON.suite_id = `${Number(suiteId)}`
   }
 
   // dedupe the user provided case id list
@@ -82,15 +97,6 @@ async function startRun(
   const addRunUrl = `${testRailInfo.host}/index.php?/api/v2/add_run/${testRailInfo.projectId}`
 
 
-  if (testRailInfo.suiteId) {
-    // let the user pass the suite ID like the TestRail shows it "S..."
-    // or just the number
-    if (testRailInfo.suiteId.startsWith('S')) {
-      testRailInfo.suiteId = testRailInfo.suiteId.substring(1)
-    }
-    postBodyJSON.suite_id = `${Number(testRailInfo.suiteId)}`
-  }
-
   // now create the run
   const response = await fetch(addRunUrl, {
     method: 'POST',
@@ -98,15 +104,15 @@ async function startRun(
       'Content-Type': 'application/json',
       authorization,
     },
-    body: postBodyJSON,
+    body: JSON.stringify(postBodyJSON),
   })
   if (!response.ok) {
+    console.error(JSON.stringify(response))
     throw new HTTPResponseError(response)
   }
   return response.json()
     .then(
       (resp) => {
-        // console.info(resp)
         process.env.TESTRAIL_RUN_ID = resp.id
         console.log(resp.id)
       },
@@ -122,4 +128,4 @@ async function startRun(
       },
     )
 }
-startRun()
+await startRun()

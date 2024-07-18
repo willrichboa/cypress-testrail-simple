@@ -106,4 +106,4 @@ async function stopTestRailRun(runId = process.env.TESTRAIL_RUN_ID, force = proc
         )
     })
 }
-stopTestRailRun()
+await stopTestRailRun()
