@@ -31,7 +31,7 @@ describe('testrail-api tests', () => {
   })
   it('getTestRunResults', () => {
     cy.wrap(getTestRailConfig()).then(gotConfig => {
-      cy.wrap(getTestRunResults('any', gotConfig)).should('deep.eq', [{ case_id: 1918201, status: 'Untested' }])
+      cy.wrap(getTestRunResults('any', gotConfig)).should('deep.eq', [{ case_id: 12345, status: 'Untested' }])
     })
   })
   it('getCasesInTestRun', () => {

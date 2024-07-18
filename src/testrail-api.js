@@ -80,16 +80,15 @@ async function postTestResults(resultsToSend, runID, testRailInfo) {
   const addResultsUrl = `${testRailInfo.host}/index.php?/api/v2/add_results_for_cases/${runID}`
   const authorization = getAuthorization(testRailInfo)
 
-  // @ts-ignore
   const response = await fetch(addResultsUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       authorization,
     },
-    body: JSON.stringify({
+    body: {
       results: resultsToSend,
-    }),
+    },
   })
   if (!response.ok) {
     throw new HTTPResponseError(response)

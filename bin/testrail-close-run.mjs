@@ -35,10 +35,10 @@ async function closeTestRun(runId, testRailInfo) {
       'Content-Type': 'application/json',
       authorization,
     },
-    body: JSON.stringify({
+    body: {
       name: 'Started run',
       description: 'Checking...',
-    }),
+    },
   })
   if (!response.ok) {
     throw new HTTPResponseError(response)

@@ -98,7 +98,7 @@ async function startRun(
       'Content-Type': 'application/json',
       authorization,
     },
-    body: JSON.stringify(postBodyJSON),
+    body: postBodyJSON,
   })
   if (!response.ok) {
     throw new HTTPResponseError(response)
