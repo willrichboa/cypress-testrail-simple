@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 import { getAuthorization, getTestRailConfig } from "./get-config.mjs"
-import { HTTPResponseError } from './HTTPResponseError.mjs'
 
 async function getTestRun(runId, testRailInfo) {
   const closeRunUrl = `${testRailInfo.host}/index.php?/api/v2/get_run/${runId}`
@@ -11,11 +10,12 @@ async function getTestRun(runId, testRailInfo) {
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
-      authorization,
+      'Authorization': authorization,
     }
   })
   if (!response.ok) {
-    throw new HTTPResponseError(response)
+    console.log(await response.text())
+    throw new Error(`HTTP Error Response: ${response.status} ${response.statusText}`)
   }
   return response.json()
 }
@@ -33,7 +33,7 @@ async function closeTestRun(runId, testRailInfo) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      authorization,
+      'Authorization': authorization,
     },
     body: {
       name: 'Started run',
@@ -41,7 +41,8 @@ async function closeTestRun(runId, testRailInfo) {
     },
   })
   if (!response.ok) {
-    throw new HTTPResponseError(response)
+    console.log(await response.text())
+    throw new Error(`HTTP Error Response: ${response.status} ${response.statusText}`)
   }
   return response.json()
 }
@@ -50,7 +51,7 @@ async function stopTestRailRun(runId = process.env.TESTRAIL_RUN_ID, force = proc
 
 
   if (!runId) {
-    console.error('TESTRAIL_RUN_ID must be set')
+    console.error('TESTRAIL_RUN_ID must be set. exiting')
     process.exit(0)
   }
 
@@ -60,20 +61,20 @@ async function stopTestRailRun(runId = process.env.TESTRAIL_RUN_ID, force = proc
   getTestRun(runId, testRailInfo)
     .then((runInfo) => {
       if (runInfo.is_completed) {
-        console.log('Run %d was already completed', runId)
+        console.error('Run %d was already completed', runId)
         return
       }
 
       const allTestsDone = runInfo.untested_count === 0
       if (!allTestsDone) {
-        console.log(
+        console.error(
           'TestRail run %d still has %d untested cases',
           runId,
           runInfo.untested_count,
         )
 
         if (!force) {
-          console.log('will not close the run as all tests are not done.  set TESTRAIL_RUN_FORCE_CLOSE=true to force close')
+          console.error('will not close the run as all tests are not done.  set TESTRAIL_RUN_FORCE_CLOSE=true to force close')
           return
         }
       }
@@ -98,9 +99,7 @@ async function stopTestRailRun(runId = process.env.TESTRAIL_RUN_ID, force = proc
                   console.log('Run %d was already completed', runId)
                   return
                 }
-                console.error('original message when trying to close the run')
-                console.error(error)
-                process.exit(1)
+                throw error
               })
           }
         )

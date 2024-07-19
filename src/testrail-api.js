@@ -1,13 +1,5 @@
 const { getAuthorization } = require('./get-config.js')
 
-class HTTPResponseError extends Error {
-  constructor(response) {
-    super(`HTTP Error Response: ${response.status} ${response.statusText}`)
-    this.response = JSON.stringify(response, null, '/t')
-  }
-  response
-}
-
 const TestRailStatusName = [
   null,
   'Passed',
@@ -38,11 +30,12 @@ async function getTestRunResults(runId, testRailInfo) {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        authorization,
+        'Authorization': authorization,
       },
     })
     if (!response.ok) {
-      throw new HTTPResponseError(response)
+      console.log(await response.text())
+      throw new Error(`HTTP Error Response: ${response.status} ${response.statusText}`)
     }
     const jsonBody = await response.json()
     const cases = jsonBody.tests.map((t) => {
@@ -79,19 +72,21 @@ async function getCasesInTestRun(runId, testRailInfo) {
 async function postTestResults(resultsToSend, runID, testRailInfo) {
   const addResultsUrl = `${testRailInfo.host}/index.php?/api/v2/add_results_for_cases/${runID}`
   const authorization = getAuthorization(testRailInfo)
+  const postBody = {
+    results: resultsToSend,
+  }
 
   const response = await fetch(addResultsUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      authorization,
+      'Authorization': authorization,
     },
-    body: {
-      results: resultsToSend,
-    },
+    body: JSON.stringify(postBody),
   })
   if (!response.ok) {
-    throw new HTTPResponseError(response)
+    console.log(await response.text())
+    throw new Error(`HTTP Error Response: ${response.status} ${response.statusText}`)
   }
   return response.json()
 }

@@ -1,4 +1,3 @@
-const { findCases } = require('../bin/find-cases.mjs')
 const { getTestRailConfig } = require('./get-config.js')
 const { getCasesInTestRun, postTestResults } = require('./testrail-api.js')
 
@@ -88,20 +87,24 @@ async function sendTestResults(spec, results, skipPlugin = false) {
     _runId,
   )
 
-  return postTestResults(testRailResults, _runId, getTestRailConfig()).catch(
-    (err) => {
-      console.error('Error sending TestRail results')
-      console.error(err)
-      console.error(err.response.body)
-      console.error(JSON.stringify(testRailResults))
-    },
-  )
+  return postTestResults(testRailResults, _runId, getTestRailConfig())
+    .catch(
+      (err) => {
+        // don't fail just log
+        console.error('Error sending TestRail results')
+        console.error(err)
+        console.error(JSON.stringify(testRailResults))
+      },
+    )
 }
 
 async function registerPlugin(skipPlugin = false) {
-  if (skipPlugin) { return }
+  if (skipPlugin) {
+    console.log('skip plugin requested. plugin not registered')
+    return
+  }
   if (!process.env.TESTRAIL_RUN_ID) {
-    console.log('testrail run id not found')
+    console.log('testrail run id not found. plugin not registered')
     return
   }
   _runId = getTestRunId()
